@@ -14,3 +14,6 @@ TODO:
 
 Fabric mixins:
 - To fix additional problems, replace the original mixin.jar (libraries/org/spongepowered/mixin/0.8.5/mixin-0.8.5.jar) file with this one: https://repo.constructlegacy.ru/public/com/github/dima_dencep/mods/sponge-mixin/0.13.0+mixin.0.8.5/sponge-mixin-0.13.0+mixin.0.8.5.jar
+
+Install:
+- Compile it on your computer and move `fabric-loader-0.14.21+local.jar` to the mods folder (only forge for 1.20.1 is currently supported)
