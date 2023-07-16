@@ -22,7 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.spongepowered.asm.launch.MixinBootstrap;
+import org.spongepowered.asm.mixin.connect.IMixinConnector;
 import org.spongepowered.asm.mixin.FabricUtil;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.Mixins;
@@ -38,29 +38,36 @@ import net.fabricmc.loader.api.metadata.ModDependency.Kind;
 import net.fabricmc.loader.api.metadata.version.VersionInterval;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
 import net.fabricmc.loader.impl.ModContainerImpl;
-import net.fabricmc.loader.impl.launch.knot.MixinServiceKnot;
-import net.fabricmc.loader.impl.launch.knot.MixinServiceKnotBootstrap;
+import net.fabricmc.loader.api.entrypoint.PreLaunchEntrypoint;
+import net.fabricmc.loader.impl.FormattedException;
+import net.fabricmc.loader.impl.entrypoint.EntrypointUtils;
 import net.fabricmc.loader.impl.util.log.Log;
 import net.fabricmc.loader.impl.util.log.LogCategory;
 import net.fabricmc.loader.impl.util.mappings.MixinIntermediaryDevRemapper;
 import net.fabricmc.mapping.tree.TinyTree;
 
-public final class FabricMixinBootstrap {
-	private FabricMixinBootstrap() { }
-
+public final class FabricMixinBootstrap implements IMixinConnector {
 	private static boolean initialized = false;
+
+	private static FabricLoaderImpl loader;
+	private static EnvType side;
 
 	public static void init(EnvType side, FabricLoaderImpl loader) {
 		if (initialized) {
 			throw new RuntimeException("FabricMixinBootstrap has already been initialized!");
 		}
 
-		System.setProperty("mixin.bootstrapService", MixinServiceKnotBootstrap.class.getName());
-		System.setProperty("mixin.service", MixinServiceKnot.class.getName());
+		FabricMixinBootstrap.loader = loader;
+		FabricMixinBootstrap.side = side;
 
-		MixinBootstrap.init();
+		// System.setProperty("mixin.bootstrapService", MixinServiceKnotBootstrap.class.getName());
+		// System.setProperty("mixin.service", MixinServiceKnot.class.getName());
 
-		if (FabricLauncherBase.getLauncher().isDevelopment()) {
+		// MixinBootstrap.init();
+	}
+
+	public static void initRemapper() {
+		{
 			MappingConfiguration mappingConfiguration = FabricLauncherBase.getLauncher().getMappingConfiguration();
 			TinyTree mappings = mappingConfiguration.getMappings();
 
@@ -80,6 +87,15 @@ public final class FabricMixinBootstrap {
 					}
 				}
 			}
+		}
+	}
+
+	@Override
+	public void connect() {
+		try {
+			EntrypointUtils.invoke("preLaunch", PreLaunchEntrypoint.class, PreLaunchEntrypoint::onPreLaunch);
+		} catch (RuntimeException e) {
+			throw FormattedException.ofLocalized("exception.initializerFailure", e);
 		}
 
 		Map<String, ModContainerImpl> configToModMap = new HashMap<>();

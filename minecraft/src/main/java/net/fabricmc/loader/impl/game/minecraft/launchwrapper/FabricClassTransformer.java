@@ -16,16 +16,13 @@
 
 package net.fabricmc.loader.impl.game.minecraft.launchwrapper;
 
-import net.minecraft.launchwrapper.IClassTransformer;
-
 import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
 import net.fabricmc.loader.impl.launch.FabricLauncherBase;
 import net.fabricmc.loader.impl.transformer.FabricTransformer;
 
-public class FabricClassTransformer implements IClassTransformer {
-	@Override
-	public byte[] transform(String name, String transformedName, byte[] bytes) {
+public class FabricClassTransformer {
+	public static byte[] transform(String name, String transformedName, byte[] bytes) {
 		boolean isDevelopment = FabricLauncherBase.getLauncher().isDevelopment();
 		EnvType envType = FabricLauncherBase.getLauncher().getEnvironmentType();
 

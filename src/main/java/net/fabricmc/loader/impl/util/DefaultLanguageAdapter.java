@@ -123,7 +123,12 @@ public final class DefaultLanguageAdapter implements LanguageAdapter {
 				handle = MethodHandles.lookup()
 						.unreflect(targetMethod);
 			} catch (Exception ex) {
-				throw new LanguageAdapterException(ex);
+				try {
+					handle = MethodHandles.publicLookup()
+							.unreflect(targetMethod);
+				} catch (Exception e) {
+					throw new LanguageAdapterException(e);
+				}
 			}
 
 			if (object != null) {

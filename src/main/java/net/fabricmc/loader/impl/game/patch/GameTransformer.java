@@ -17,24 +17,18 @@
 package net.fabricmc.loader.impl.game.patch;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.zip.ZipError;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.ClassNode;
 
 import net.fabricmc.loader.impl.launch.FabricLauncher;
-import net.fabricmc.loader.impl.util.ExceptionUtil;
-import net.fabricmc.loader.impl.util.LoaderUtil;
-import net.fabricmc.loader.impl.util.SimpleClassPath;
-import net.fabricmc.loader.impl.util.SimpleClassPath.CpEntry;
 import net.fabricmc.loader.impl.util.log.Log;
 import net.fabricmc.loader.impl.util.log.LogCategory;
 
@@ -64,39 +58,40 @@ public class GameTransformer {
 			return;
 		}
 
+		entrypointsLocated = true;
+
 		patchedClasses = new HashMap<>();
 
-		try (SimpleClassPath cp = new SimpleClassPath(gameJars)) {
-			Function<String, ClassReader> classSource = name -> {
-				byte[] data = patchedClasses.get(name);
+		Function<String, ClassReader> classSource = name -> {
+			byte[] data = patchedClasses.get(name);
 
-				if (data != null) {
-					return new ClassReader(data);
-				}
-
-				try {
-					CpEntry entry = cp.getEntry(LoaderUtil.getClassFileName(name));
-					if (entry == null) return null;
-
-					try (InputStream is = entry.getInputStream()) {
-						return new ClassReader(is);
-					} catch (IOException | ZipError e) {
-						throw new RuntimeException(String.format("error reading %s in %s: %s", name, LoaderUtil.normalizePath(entry.getOrigin()), e), e);
-					}
-				} catch (IOException e) {
-					throw ExceptionUtil.wrap(e);
-				}
-			};
-
-			for (GamePatch patch : patches) {
-				patch.process(launcher, classSource, this::addPatchedClass);
+			if (data != null) {
+				return new ClassReader(data);
 			}
-		} catch (IOException e) {
-			throw ExceptionUtil.wrap(e);
+
+			try {
+				byte[] data0 = launcher.getClassByteArray(name, false);
+
+				if (data0 == null) return null;
+
+				return new ClassReader(data0);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		};
+
+		for (GamePatch patch : patches) {
+			patch.process(launcher, classSource, this::addPatchedClass);
 		}
 
 		Log.debug(LogCategory.GAME_PATCH, "Patched %d class%s", patchedClasses.size(), patchedClasses.size() != 1 ? "s" : "");
-		entrypointsLocated = true;
+	}
+
+	public static ClassNode toClassNode(byte[] classBytes) {
+		ClassReader reader = new ClassReader(classBytes);
+		ClassNode result = new ClassNode();
+		reader.accept(result, ClassReader.SKIP_FRAMES);
+		return result;
 	}
 
 	/**

@@ -65,7 +65,7 @@ public final class MappingConfiguration {
 	}
 
 	public String getTargetNamespace() {
-		return FabricLauncherBase.getLauncher().isDevelopment() ? "named" : "intermediary";
+		return FabricLauncherBase.getLauncher().isDevelopment() ? "named" : "srg";
 	}
 
 	public boolean requiresPackageAccessHack() {

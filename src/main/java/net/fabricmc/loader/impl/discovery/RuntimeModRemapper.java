@@ -23,16 +23,25 @@ import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.objectweb.asm.commons.Remapper;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import dev.architectury.refmapremapper.RefmapRemapper;
+import dev.architectury.refmapremapper.remapper.MappingsRemapper;
+import dev.architectury.refmapremapper.remapper.SimpleReferenceRemapper;
+import org.spongepowered.asm.mixin.MixinEnvironment;
 
 import net.fabricmc.accesswidener.AccessWidenerReader;
 import net.fabricmc.accesswidener.AccessWidenerRemapper;
@@ -41,10 +50,11 @@ import net.fabricmc.loader.impl.FormattedException;
 import net.fabricmc.loader.impl.launch.FabricLauncher;
 import net.fabricmc.loader.impl.launch.FabricLauncherBase;
 import net.fabricmc.loader.impl.util.FileSystemUtil;
-import net.fabricmc.loader.impl.util.SystemProperties;
+import net.fabricmc.loader.impl.launch.FabricMixinBootstrap;
 import net.fabricmc.loader.impl.util.log.Log;
 import net.fabricmc.loader.impl.util.log.LogCategory;
 import net.fabricmc.loader.impl.util.mappings.TinyRemapperMappingsHelper;
+import net.fabricmc.tinyremapper.extension.mixin.MixinExtension;
 import net.fabricmc.tinyremapper.InputTag;
 import net.fabricmc.tinyremapper.NonClassCopyMode;
 import net.fabricmc.tinyremapper.OutputConsumerPath;
@@ -67,6 +77,7 @@ public final class RuntimeModRemapper {
 		TinyRemapper remapper = TinyRemapper.newRemapper()
 				.withMappings(TinyRemapperMappingsHelper.create(launcher.getMappingConfiguration().getMappings(), "intermediary", launcher.getTargetNamespace()))
 				.renameInvalidLocals(false)
+				.extension(new MixinExtension(EnumSet.of(MixinExtension.AnnotationTarget.HARD)))
 				.build();
 
 		try {
@@ -140,8 +151,71 @@ public final class RuntimeModRemapper {
 
 			remapper.finish();
 
+			FabricMixinBootstrap.initRemapper();
+
+			SimpleReferenceRemapper referenceRemapper = new SimpleReferenceRemapper(new SimpleReferenceRemapper.Remapper() {
+				@Override
+				public String mapClass(String value) {
+					return MixinEnvironment.getDefaultEnvironment().getRemappers().map(value);
+				}
+
+				@Override
+				public String mapMethod(String className, String methodName, String methodDescriptor) {
+					return MixinEnvironment.getDefaultEnvironment().getRemappers().mapMethodName(className, methodName, methodDescriptor);
+				}
+
+				@Override
+				public String mapField(String className, String fieldName, String fieldDescriptor) {
+					return MixinEnvironment.getDefaultEnvironment().getRemappers().mapFieldName(className, fieldName, fieldDescriptor);
+				}
+			}) {
+				@Override
+				public String remapSimple(String key, String value) {
+					String remapped = super.remapSimple(key, value);
+
+					Log.info(LogCategory.MOD_REMAP, "Remapped refmap value %s -> %s", value, remapped);
+
+					return remapped;
+				}
+			};
+
+			dev.architectury.refmapremapper.remapper.Remapper DFG = new dev.architectury.refmapremapper.remapper.Remapper() {
+				@Override
+				public MappingsRemapper remapMappings() {
+					return className -> referenceRemapper;
+				}
+
+				@Override
+				public Map.Entry<String, MappingsRemapper> remapMappingsData(String data) {
+					if (Objects.equals(data, "named:intermediary")) {
+						return new AbstractMap.SimpleEntry<>("searge", remapMappings());
+					}
+
+					return null;
+				}
+			};
+
 			for (ModCandidate mod : modsToRemap) {
 				RemapInfo info = infoMap.get(mod);
+
+				try (FileSystemUtil.FileSystemDelegate jarFs = FileSystemUtil.getJarFileSystem(info.outputPath, false)) {
+					FileSystem fs = jarFs.get();
+
+					for (String config : mod.getMetadata().getMixinConfigs(launcher.getEnvironmentType())) {
+						JsonObject mixinConfig = new JsonParser().parse(Files.newBufferedReader(fs.getPath(config))).getAsJsonObject();
+
+						if (mixinConfig.has("refmap")) {
+							String refMap = mixinConfig.get("refmap").getAsString();
+
+							if (Files.exists(fs.getPath(refMap))) {
+								byte[] remapped = RefmapRemapper.remap(DFG, new String(Files.readAllBytes(fs.getPath(refMap)), StandardCharsets.UTF_8)).getBytes(StandardCharsets.UTF_8);
+
+								Files.delete(fs.getPath(refMap));
+								Files.write(fs.getPath(refMap), remapped);
+							}
+						}
+					}
+				}
 
 				info.outputConsumerPath.close();
 
@@ -185,20 +259,16 @@ public final class RuntimeModRemapper {
 
 	private static byte[] remapAccessWidener(byte[] input, Remapper remapper) {
 		AccessWidenerWriter writer = new AccessWidenerWriter();
-		AccessWidenerRemapper remappingDecorator = new AccessWidenerRemapper(writer, remapper, "intermediary", "named");
+		AccessWidenerRemapper remappingDecorator = new AccessWidenerRemapper(writer, remapper, "intermediary", FabricLauncherBase.getLauncher().getTargetNamespace());
 		AccessWidenerReader accessWidenerReader = new AccessWidenerReader(remappingDecorator);
 		accessWidenerReader.read(input, "intermediary");
 		return writer.write();
 	}
 
 	private static List<Path> getRemapClasspath() throws IOException {
-		String remapClasspathFile = System.getProperty(SystemProperties.REMAP_CLASSPATH_FILE);
+		String content = System.getProperty("java.class.path");
 
-		if (remapClasspathFile == null) {
-			throw new RuntimeException("No remapClasspathFile provided");
-		}
-
-		String content = new String(Files.readAllBytes(Paths.get(remapClasspathFile)), StandardCharsets.UTF_8);
+		content += File.pathSeparator + "./.fabric/remappedJars/minecraft-1.20.1-0.14.21/client-intermediary.jar";
 
 		return Arrays.stream(content.split(File.pathSeparator))
 				.map(Paths::get)

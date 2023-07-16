@@ -17,9 +17,6 @@
 package net.fabricmc.loader.impl.game.minecraft;
 
 import java.io.IOException;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -38,7 +35,6 @@ import net.fabricmc.loader.api.ObjectShare;
 import net.fabricmc.loader.api.VersionParsingException;
 import net.fabricmc.loader.api.metadata.ModDependency;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
-import net.fabricmc.loader.impl.FormattedException;
 import net.fabricmc.loader.impl.game.GameProvider;
 import net.fabricmc.loader.impl.game.GameProviderHelper;
 import net.fabricmc.loader.impl.game.LibClassifier;
@@ -75,7 +71,7 @@ public class MinecraftGameProvider implements GameProvider {
 	private EnvType envType;
 	private String entrypoint;
 	private Arguments arguments;
-	private final List<Path> gameJars = new ArrayList<>(2); // env game jar and potentially common game jar
+	public final List<Path> gameJars = new ArrayList<>(2); // env game jar and potentially common game jar
 	private Path realmsJar;
 	private final Set<Path> logJars = new HashSet<>();
 	private boolean log4jAvailable;
@@ -316,7 +312,7 @@ public class MinecraftGameProvider implements GameProvider {
 				obfJars.put("realms", realmsJar);
 			}
 
-			obfJars = GameProviderHelper.deobfuscate(obfJars,
+			GameProviderHelper.deobfuscate(obfJars,
 					getGameId(), getNormalizedGameVersion(),
 					getLaunchDirectory(),
 					launcher);
@@ -332,7 +328,7 @@ public class MinecraftGameProvider implements GameProvider {
 		}
 
 		// Load the logger libraries on the platform CL when in a unit test
-		if (!logJars.isEmpty() && !Boolean.getBoolean(SystemProperties.UNIT_TEST)) {
+		/*if (!logJars.isEmpty() && !Boolean.getBoolean(SystemProperties.UNIT_TEST)) {
 			for (Path jar : logJars) {
 				if (gameJars.contains(jar)) {
 					launcher.addToClassPath(jar, ALLOWED_EARLY_CLASS_PREFIXES);
@@ -340,11 +336,9 @@ public class MinecraftGameProvider implements GameProvider {
 					launcher.addToClassPath(jar);
 				}
 			}
-		}
+		}*/
 
-		setupLogHandler(launcher, true);
-
-		transformer.locateEntrypoints(launcher, gameJars);
+		setupLogHandler(launcher, false);
 	}
 
 	private void setupLogHandler(FabricLauncher launcher, boolean useTargetCl) {
@@ -432,42 +426,11 @@ public class MinecraftGameProvider implements GameProvider {
 
 	@Override
 	public void unlockClassPath(FabricLauncher launcher) {
-		for (Path gameJar : gameJars) {
-			if (logJars.contains(gameJar)) {
-				launcher.setAllowedPrefixes(gameJar);
-			} else {
-				launcher.addToClassPath(gameJar);
-			}
-		}
-
-		if (realmsJar != null) launcher.addToClassPath(realmsJar);
-
-		for (Path lib : miscGameLibraries) {
-			launcher.addToClassPath(lib);
-		}
+		throw new UnsupportedOperationException("unlockClassPath is unsupported!");
 	}
 
 	@Override
 	public void launch(ClassLoader loader) {
-		String targetClass = entrypoint;
-
-		if (envType == EnvType.CLIENT && targetClass.contains("Applet")) {
-			targetClass = "net.fabricmc.loader.impl.game.minecraft.applet.AppletMain";
-		}
-
-		MethodHandle invoker;
-
-		try {
-			Class<?> c = loader.loadClass(targetClass);
-			invoker = MethodHandles.lookup().findStatic(c, "main", MethodType.methodType(void.class, String[].class));
-		} catch (NoSuchMethodException | IllegalAccessException | ClassNotFoundException e) {
-			throw FormattedException.ofLocalized("exception.minecraft.invokeFailure", e);
-		}
-
-		try {
-			invoker.invokeExact(arguments.toArray());
-		} catch (Throwable t) {
-			throw FormattedException.ofLocalized("exception.minecraft.generic", t);
-		}
+		throw new UnsupportedOperationException("launch is unsupported!");
 	}
 }

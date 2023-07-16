@@ -197,7 +197,7 @@ public final class FabricLoaderImpl extends net.fabricmc.loader.FabricLoader {
 	}
 
 	private void setup() throws ModResolutionException {
-		boolean remapRegularMods = isDevelopmentEnvironment();
+		boolean remapRegularMods = true;
 		VersionOverrides versionOverrides = new VersionOverrides();
 		DependencyOverrides depOverrides = new DependencyOverrides(configDir);
 
@@ -205,7 +205,7 @@ public final class FabricLoaderImpl extends net.fabricmc.loader.FabricLoader {
 
 		ModDiscoverer discoverer = new ModDiscoverer(versionOverrides, depOverrides);
 		discoverer.addCandidateFinder(new ClasspathModCandidateFinder());
-		discoverer.addCandidateFinder(new DirectoryModCandidateFinder(gameDir.resolve("mods"), remapRegularMods));
+		discoverer.addCandidateFinder(new DirectoryModCandidateFinder(gameDir.resolve("mods").resolve("fabric"), remapRegularMods));
 		discoverer.addCandidateFinder(new ArgumentModCandidateFinder(remapRegularMods));
 
 		Map<String, Set<ModCandidate>> envDisabledMods = new HashMap<>();
@@ -233,8 +233,8 @@ public final class FabricLoaderImpl extends net.fabricmc.loader.FabricLoader {
 		// runtime mod remapping
 
 		if (remapRegularMods) {
-			if (System.getProperty(SystemProperties.REMAP_CLASSPATH_FILE) == null) {
-				Log.warn(LogCategory.MOD_REMAP, "Runtime mod remapping disabled due to no fabric.remapClasspathFile being specified. You may need to update loom.");
+			if (System.getProperty(SystemProperties.REMAP_CLASSPATH_FILE) != null) {
+				Log.warn(LogCategory.MOD_REMAP, "Runtime mod remapping disabled due to fabric.remapClasspathFile being specified.");
 			} else {
 				RuntimeModRemapper.remap(modCandidates, cacheDir.resolve(TMP_DIR_NAME), outputdir);
 			}

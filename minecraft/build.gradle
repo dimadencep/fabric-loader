@@ -1,7 +1,11 @@
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
+sourceCompatibility = JavaVersion.VERSION_17
+targetCompatibility = JavaVersion.VERSION_17
 
 repositories {
+	maven {
+		name = 'MinecraftForge'
+		url = 'https://maven.minecraftforge.net/'
+	}
 	maven {
 		name = 'Mojang'
 		url = 'https://libraries.minecraft.net/'
@@ -11,15 +15,19 @@ repositories {
 dependencies {
 	api project(":")
 
+	api "cpw.mods:bootstraplauncher:1.1.2" // Fuck this library
+	api "cpw.mods:securejarhandler:2.1.6"
+	api "cpw.mods:modlauncher:10.0.8"
+
 	// log4j wrapper
-	compileOnly 'org.apache.logging.log4j:log4j-api:2.8.1'
+	compileOnly 'org.apache.logging.log4j:log4j-api:2.20.0'
 	// slf4j wrapper
 	compileOnly 'org.slf4j:slf4j-api:1.8.0-beta4'
 
 	// launchwrapper + dependencies
-	compileOnly ('net.minecraft:launchwrapper:1.12') {
-		transitive = false
-	}
+	// compileOnly ('net.minecraft:launchwrapper:1.12') {
+	// 	transitive = false
+	//}
 	//implementation 'net.sf.jopt-simple:jopt-simple:5.0.3'
 }
 
@@ -32,9 +40,9 @@ sourceSets {
 tasks.withType(JavaCompile).configureEach {
 	it.options.encoding = "UTF-8"
 
-	if (JavaVersion.current().isJava9Compatible()) {
-		it.options.release = 8
-	}
+	// if (JavaVersion.current().isJava9Compatible()) {
+	// 	it.options.release = 8
+	// }
 }
 
 jar {

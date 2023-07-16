@@ -176,7 +176,7 @@ public final class GameProviderHelper {
 							gameVersion));
 		}
 
-		String targetNamespace = mappingConfig.getTargetNamespace();
+		String targetNamespace = "intermediary";
 		TinyTree mappings = mappingConfig.getMappings();
 
 		if (mappings == null
