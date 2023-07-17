@@ -19,7 +19,6 @@ package net.fabricmc.loader.impl.game.minecraft.modlauncher;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -33,7 +32,6 @@ import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 
 import org.spongepowered.asm.service.MixinService;
-import com.google.common.io.Resources;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.Type;
 import cpw.mods.jarhandling.SecureJar;
@@ -291,24 +289,21 @@ public class FabricModLauncher extends FabricLauncherBase implements ITransforma
 
 	@Override
 	public byte[] getClassByteArray(String name, boolean runTransformers) {
-		String canonicalName = name.replace('/', '.');
-		String internalName = name.replace('.', '/');
-
 		try {
-			return this.transformerLoader.buildTransformedClassNodeFor(canonicalName);
-		} catch (ClassNotFoundException ex) {
-			URL url = Thread.currentThread().getContextClassLoader().getResource(internalName + ".class");
+			ClassNode classNode = MixinService.getService().getBytecodeProvider().getClassNode(name);
 
-			if (url == null) {
+			if (classNode == null) {
 				return null;
 			}
 
-			try {
-				return Resources.asByteSource(url).read();
-			} catch (IOException ioex) {
-				return null;
-			}
+			return AsmUtils.toBytes(classNode);
+		} catch (ClassNotFoundException e) {
+			Log.error(LOG_CATEGORY, "Class %s not found!", name);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
 		}
+
+		return null;
 	}
 
 	@Override
