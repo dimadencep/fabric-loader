@@ -19,7 +19,6 @@ package net.fabricmc.loader.impl.game.minecraft.modlauncher;
 import static net.fabricmc.loader.impl.game.minecraft.modlauncher.FabricModLauncher.LOG_CATEGORY;
 
 import java.lang.module.ModuleDescriptor;
-import java.nio.file.Path;
 
 import cpw.mods.jarhandling.JarMetadata;
 import cpw.mods.jarhandling.SecureJar;
@@ -31,9 +30,9 @@ public class FabricJarMetadata implements JarMetadata {
 	private final JarMetadata delegate;
 	private final SecureJar secureJar;
 
-	public FabricJarMetadata(SecureJar secureJar, Path path) {
-		this.delegate = JarMetadata.from(secureJar, path);
+	public FabricJarMetadata(SecureJar secureJar, JarMetadata delegate) {
 		this.secureJar = secureJar;
+		this.delegate = delegate;
 	}
 
 	@Override

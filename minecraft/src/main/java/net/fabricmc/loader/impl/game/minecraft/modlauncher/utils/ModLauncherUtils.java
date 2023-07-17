@@ -174,17 +174,21 @@ public class ModLauncherUtils {
 
 	public static JarMetadata getMetadataFromJar(final SecureJar jar) {
 		var mi = jar.moduleDataProvider().findFile("module-info.class");
+		var pkgs = jar.getPackages();
 
 		if (mi.isPresent()) {
-			return new ModuleJarMetadata(mi.get(), jar.getPackages());
+			return new ModuleJarMetadata(mi.get(), pkgs);
 		}
+
+		var providers = jar.getProviders();
+		var fileCandidate = JarMetadata.fromFileName(jar.getPrimaryPath(), pkgs, providers);
 
 		var autoName = jar.moduleDataProvider().getManifest().getMainAttributes().getValue("Automatic-Module-Name");
 
 		if (autoName != null) {
-			return new SimpleJarMetadata(autoName, null, jar.getPackages(), jar.getProviders());
+			return new SimpleJarMetadata(autoName, fileCandidate.version(), pkgs, providers);
 		}
 
-		return new FabricJarMetadata(jar, jar.getPrimaryPath());
+		return new FabricJarMetadata(jar, fileCandidate);
 	}
 }
