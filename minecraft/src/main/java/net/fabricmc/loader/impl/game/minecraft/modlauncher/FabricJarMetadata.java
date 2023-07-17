@@ -46,8 +46,8 @@ public class FabricJarMetadata implements JarMetadata {
 					return otherModuleName;
 				}
 			}
-		} catch (Throwable var12) {
-			Log.error(LOG_CATEGORY, "Exception occurred while trying to self-rename module " + this.delegate.name() + ": ", var12);
+		} catch (Throwable t) {
+			Log.error(LOG_CATEGORY, "Exception occurred while trying to self-rename module %s: %s", this.delegate.name(), t);
 		}
 
 		return this.delegate.name();
