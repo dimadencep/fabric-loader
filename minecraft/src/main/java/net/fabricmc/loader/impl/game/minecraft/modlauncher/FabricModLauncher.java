@@ -215,7 +215,7 @@ public class FabricModLauncher extends FabricLauncherBase implements ITransforma
 
 	@Override
 	public void addToClassPath(Path path, String... allowedPrefixes) {
-		SecureJar jar = SecureJar.from(ModLauncherUtils::getMetadataFromJar, path);
+		SecureJar jar = SecureJar.from(ModLauncherUtils::createMetadataFromJar, path);
 
 		try {
 			ModLauncherUtils.addJarToLayer(IModuleLayerManager.Layer.GAME, jar);

@@ -24,6 +24,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
+import cpw.mods.jarhandling.impl.Jar;
 import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.launch.platform.MixinConnectorManager;
 import org.spongepowered.asm.launch.platform.MixinPlatformManager;
@@ -172,7 +173,18 @@ public class ModLauncherUtils {
 		return jars;
 	}
 
-	public static JarMetadata getMetadataFromJar(final SecureJar jar) {
+	public static Field metadataField;
+
+	public static JarMetadata getMetadataFromJar(Jar jar) throws Exception {
+		if (metadataField == null) {
+			metadataField = Jar.class.getDeclaredField("metadata");
+			metadataField.setAccessible(true);
+		}
+
+		return UnsafeHacks.getField(metadataField, jar);
+	}
+
+	public static JarMetadata createMetadataFromJar(SecureJar jar) {
 		var mi = jar.moduleDataProvider().findFile("module-info.class");
 		var pkgs = jar.getPackages();
 
