@@ -54,7 +54,6 @@ import net.fabricmc.loader.impl.discovery.RuntimeModRemapper;
 import net.fabricmc.loader.impl.entrypoint.EntrypointStorage;
 import net.fabricmc.loader.impl.game.GameProvider;
 import net.fabricmc.loader.impl.launch.FabricLauncherBase;
-import net.fabricmc.loader.impl.launch.knot.Knot;
 import net.fabricmc.loader.impl.metadata.DependencyOverrides;
 import net.fabricmc.loader.impl.metadata.EntrypointMetadata;
 import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
@@ -487,7 +486,7 @@ public final class FabricLoaderImpl extends net.fabricmc.loader.FabricLoader {
 			throw new RuntimeException("Cannot instantiate mods when not frozen!");
 		}
 
-		if (gameInstance != null && FabricLauncherBase.getLauncher() instanceof Knot) {
+		if (gameInstance != null) {
 			ClassLoader gameClassLoader = gameInstance.getClass().getClassLoader();
 			ClassLoader targetClassLoader = FabricLauncherBase.getLauncher().getTargetClassLoader();
 			boolean matchesKnot = (gameClassLoader == targetClassLoader);

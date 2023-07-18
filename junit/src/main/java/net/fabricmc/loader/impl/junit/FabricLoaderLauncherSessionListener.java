@@ -16,13 +16,9 @@
 
 package net.fabricmc.loader.impl.junit;
 
-import java.util.Locale;
-
 import org.junit.platform.launcher.LauncherSession;
 import org.junit.platform.launcher.LauncherSessionListener;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.loader.impl.launch.knot.Knot;
 import net.fabricmc.loader.impl.util.SystemProperties;
 
 public class FabricLoaderLauncherSessionListener implements LauncherSessionListener {
@@ -31,32 +27,12 @@ public class FabricLoaderLauncherSessionListener implements LauncherSessionListe
 		System.setProperty(SystemProperties.UNIT_TEST, "true");
 	}
 
-	private final Knot knot;
-	private final ClassLoader classLoader;
-
 	private ClassLoader launcherSessionClassLoader;
-
-	public FabricLoaderLauncherSessionListener() {
-		final Thread currentThread = Thread.currentThread();
-		final ClassLoader originalClassLoader = currentThread.getContextClassLoader();
-
-		// parse the test environment type, defaults to client
-		final EnvType envType = EnvType.valueOf(System.getProperty(SystemProperties.SIDE, EnvType.CLIENT.name()).toUpperCase(Locale.ROOT));
-
-		try {
-			knot = new Knot(envType);
-			classLoader = knot.init(new String[]{});
-		} finally {
-			// Knot.init sets the context class loader, revert it back for now.
-			currentThread.setContextClassLoader(originalClassLoader);
-		}
-	}
 
 	@Override
 	public void launcherSessionOpened(LauncherSession session) {
 		final Thread currentThread = Thread.currentThread();
 		launcherSessionClassLoader = currentThread.getContextClassLoader();
-		currentThread.setContextClassLoader(classLoader);
 	}
 
 	@Override
